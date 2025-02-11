@@ -1,0 +1,23 @@
+services:
+  translate_service:
+    image: translate:1.0
+    container_name: translate
+    devices:
+      - nvidia.com/gpu=all
+    ipc : host
+    tty: true
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           device_ids: ["0"]
+    #           capabilities: [gpu]
+    volumes:
+      - .:/app/translation:z
+    ports:
+      - "8082:8082"
+    working_dir: /app/translation
+
+    entrypoint: 
+      ["python3.9", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8082", "--reload"]

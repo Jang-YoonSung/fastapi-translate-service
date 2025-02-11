@@ -1,0 +1,10 @@
+transformers==4.45.1
+fastapi
+uvicorn
+uvicorn[standard]
+requests
+typing_extensions==4.12.2
+accelerate==0.29.0
+sentencepiece
+protobuf
+bitsandbytes
