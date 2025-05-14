@@ -1,23 +1,81 @@
 services:
-  translate_service:
-    image: translate:1.0
-    container_name: translate
-    devices:
-      - nvidia.com/gpu=all
-    ipc : host
-    tty: true
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           device_ids: ["0"]
-    #           capabilities: [gpu]
+  translate_server: # 내가 원하는 서비스 이름
+    image: translate_celery:1.0
+    container_name: translate_server
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
     volumes:
-      - .:/app/translation:z
+      - /home/solugate/celery_prac/fastapi:/app
     ports:
-      - "8082:8082"
-    working_dir: /app/translation
+      - "1550:5005"
+    depends_on: 
+      - redis
+      - rabbitmq
+    networks:
+      - celery-net
+    working_dir: /app
+    env_file:
+      - .env
+    entrypoint:
+      ["python3.11", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5005", "--reload"]
 
-    entrypoint: 
-      ["python3.9", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8082", "--reload"]
+  celery_worker: # 내가 원하는 서비스 이름
+    restart: always
+    image: translate_celery:1.0
+    container_name: translate_celery_worker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    volumes:
+      - /home/solugate/celery_prac/fastapi:/app
+    ports:
+      - "1050:5000"
+    environment:
+      - TZ=Asia/Seoul
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - celery-net
+    working_dir: /app
+    env_file:
+      - .env
+    # entrypoint: ["celery", "-A", "router.tasks", "worker", "--loglevel=info", "--concurrency=2"]
+    entrypoint: ["celery", "-A", "router.tasks", "worker", "--loglevel=info", "--pool=solo"]
+
+  redis:
+    image: redis:7.2
+    container_name: translate_redis
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=Asia/Seoul
+    networks:
+      - celery-net
+
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    container_name: translate_rabbitmq
+    ports:
+      - "5672:5672"    # 브로커용 포트
+      - "15672:15672"  # 웹 UI용 포트
+    # env_file:
+    #   - .env
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    networks:
+      - celery-net
+
+networks:
+  celery-net:
+    driver: bridge
