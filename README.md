@@ -51,6 +51,8 @@ RABBITMQ_PASS=your_rabbitmq_password
 ```bash
 docker-compose up --build
 ```
+hugging-face 에서 madlad-400 model 다운로드 후 사용 가능합니다.
+
 서비스 실행 후, 아래 주소에서 API 문서를 확인할 수 있습니다:
 
 👉 http://localhost:8000/docs
